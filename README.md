@@ -216,21 +216,222 @@ Logs are available in:
 - Local file: `etl.log`
 - Azure: Log Analytics workspace
 
-## Testing
+## 🧪 Testing
 
-### Manual Testing
+This project includes comprehensive testing with 50+ test cases covering unit, integration, and performance scenarios.
+
+### Quick Test Commands
 
 ```bash
-# Test database connection
-docker exec -it usajobs_postgres psql -U postgres -d usajobs -c "SELECT COUNT(*) FROM job_postings;"
+# Run all tests with coverage
+./run_tests.sh all
+
+# Run specific test types
+./run_tests.sh unit           # Unit tests only
+./run_tests.sh integration    # Integration tests only  
+./run_tests.sh performance    # Performance benchmarks
+./run_tests.sh smoke          # Quick validation tests
+
+# Set up test environment (first time only)
+./run_tests.sh setup
+```
+
+### Test Types Available
+
+#### 1. Unit Tests (`tests/test_unit.py`)
+
+Tests individual components in isolation:
+
+```bash
+# Run unit tests
+./run_tests.sh unit
+
+# Or with pytest directly
+pytest tests/test_unit.py -v --cov=etl
+```
+
+**What's tested:**
+
+- ✅ JobPosting data validation
+- ✅ Circuit breaker functionality
+- ✅ API client error handling
+- ✅ Database connection management
+- ✅ Data parsing and transformation
+
+#### 2. Integration Tests (`tests/test_integration.py`)
+
+Tests component interactions:
+
+```bash
+# Run integration tests (requires running database)
+docker-compose up -d postgres
+./run_tests.sh integration
+```
+
+**What's tested:**
+
+- ✅ Database operations (CRUD)
+- ✅ API integration with USAJOBS
+- ✅ End-to-end ETL pipeline
+- ✅ Error recovery scenarios
+
+#### 3. Performance Tests (`tests/test_performance.py`)
+
+Benchmarks and performance validation:
+
+```bash
+# Run performance tests
+./run_tests.sh performance
+```
+
+**What's tested:**
+
+- ✅ ETL processing speed
+- ✅ Database query performance
+- ✅ Memory usage patterns
+- ✅ API response times
+
+#### 4. System Tests (`test.sh`)
+
+Validates running system:
+
+```bash
+# Test live system (requires services running)
+docker-compose up -d
+./test.sh
+```
+
+**What's validated:**
+
+- ✅ Service health checks
+- ✅ Database connectivity
+- ✅ Data integrity
+- ✅ API accessibility
+- ✅ ETL execution results
+
+### Test Reports and Coverage
+
+```bash
+# Generate coverage report
+./run_tests.sh all
+
+# View HTML coverage report
+open htmlcov/index.html
+
+# View test reports
+ls reports/
+# - all-test-results.xml
+# - coverage.xml
+# - unit-test-results.xml
+```
+
+### Manual Testing Commands
+
+#### Database Validation
+
+```bash
+# Check job count
+docker-compose exec postgres psql -U postgres -d usajobs -c "SELECT COUNT(*) FROM job_postings;"
 
 # View recent jobs
-docker exec -it usajobs_postgres psql -U postgres -d usajobs -c "SELECT position_title, position_location FROM job_postings ORDER BY created_at DESC LIMIT 10;"
+docker-compose exec postgres psql -U postgres -d usajobs -c "
+SELECT position_title, organization_name, position_location 
+FROM job_postings 
+ORDER BY created_at DESC 
+LIMIT 10;"
+
+# Check data statistics
+docker-compose exec postgres psql -U postgres -d usajobs -c "SELECT * FROM job_statistics;"
 ```
+
+#### API Testing
+
+```bash
+# Test API connectivity (requires USAJOBS_API_KEY)
+curl -H "Authorization-Key: YOUR_API_KEY" \
+     -H "User-Agent: test-client/1.0" \
+     "https://data.usajobs.gov/api/search?Keyword=data%20engineering&ResultsPerPage=1"
+```
+
+#### ETL Execution Testing
+
+```bash
+# Run ETL manually with specific parameters
+docker-compose run --rm -e SEARCH_KEYWORD="data scientist" -e SEARCH_LOCATION="Chicago, Illinois" etl
+
+# Monitor ETL logs
+docker-compose logs -f etl
+```
+
+### Continuous Integration
+
+For CI/CD pipelines, use:
+
+```yaml
+# GitHub Actions example
+- name: Run Tests
+  run: |
+    ./run_tests.sh setup
+    ./run_tests.sh all
+    
+- name: Upload Coverage
+  uses: codecov/codecov-action@v3
+  with:
+    file: ./reports/coverage.xml
+```
+
+### Test Environment Setup
+
+#### First-time Setup
+
+```bash
+# Install test dependencies
+./run_tests.sh setup
+
+# Or manually
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+pip install pytest pytest-cov pytest-mock pytest-asyncio
+```
+
+#### Test Data
+
+Tests use:
+
+- 📁 **Mock data** for unit tests (no external dependencies)
+- 🗄️ **Test database** for integration tests (temporary)
+- 🌐 **Live API** for system tests (requires API key)
+
+### Troubleshooting Tests
+
+#### Test Issues
+
+```bash
+# Database connection issues
+docker-compose up -d postgres
+docker-compose ps  # Check if postgres is healthy
+
+# Python environment issues
+source venv/bin/activate
+pip install -r requirements.txt
+
+# Permission issues
+chmod +x run_tests.sh test.sh
+```
+
+#### Test Configuration
+
+Tests respect these environment variables:
+
+- `USAJOBS_API_KEY` - For API integration tests
+- `POSTGRES_HOST` - Database connection (default: localhost)
+- `TEST_TIMEOUT` - Test timeout in seconds (default: 30)
 
 ### Production Monitoring
 
 Monitor the following metrics:
+
 - ETL job success/failure rates
 - API response times
 - Database connection health
