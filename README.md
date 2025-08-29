@@ -238,4 +238,3 @@ Monitor the following metrics:
 
 ## License
 
-This project is developed as part of a technical assessment for Tasman Analytics.
