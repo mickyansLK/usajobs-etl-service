@@ -1,0 +1,45 @@
+# Example Terraform variables file for development environment
+# Copy this file to terraform.tfvars and customize for your deployment
+
+# Environment Configuration
+environment = "dev"
+location    = "East US"
+owner       = "DataEngineering"
+
+# USAJOBS API Configuration
+# Get your API key from: https://developer.usajobs.gov/APIRequest
+usajobs_api_key = "your-usajobs-api-key-here"
+
+# PostgreSQL Configuration
+postgres_admin_username        = "postgres"
+postgres_admin_password        = "YourSecurePassword123!"
+postgres_sku                  = "B_Standard_B1ms"    # Basic tier for dev
+postgres_storage_mb           = 32768                 # 32 GB
+postgres_backup_retention_days = 7
+postgres_geo_redundant_backup = false
+postgres_ha_enabled           = false                # Disable HA for dev
+allow_public_database_access  = true                 # Enable for dev/testing
+
+# Container Registry Configuration
+acr_sku            = "Basic"
+acr_retention_days = 30
+
+# Container App Configuration
+container_image_tag    = "latest"
+container_cpu         = 0.25
+container_memory      = "0.5Gi"
+container_max_replicas = 1
+
+# Logging and Monitoring
+log_level           = "INFO"
+log_retention_days  = 30
+
+# Scheduling Configuration
+enable_logic_app_scheduler = true
+schedule_hour             = 6      # 6 AM UTC
+schedule_timezone         = "UTC"
+
+# Storage Configuration
+create_storage_account    = true
+storage_replication_type = "LRS"
+blob_retention_days      = 90

@@ -1,0 +1,26 @@
+# Core ETL dependencies
+requests==2.31.0
+psycopg2-binary==2.9.9
+python-dotenv==1.0.0
+
+# Data processing and validation
+pydantic==2.5.0
+
+# Enhanced logging and monitoring
+structlog==23.2.0
+
+# Retry and circuit breaker patterns
+tenacity==8.2.3
+
+# HTTP client with better session management
+httpx==0.25.2
+
+# Development and testing dependencies
+pytest==7.4.3
+pytest-cov==4.1.0
+black==23.11.0
+flake8==6.1.0
+mypy==1.7.1
+
+# Type stubs
+types-requests==2.31.0.10

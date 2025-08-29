@@ -1,0 +1,107 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: usajobs_postgres_prod
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data_prod:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - ./backups:/backups  # For database backups
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: always
+    # Security improvements for production
+    security_opt:
+      - no-new-privileges:true
+    # Resource limits
+    mem_limit: 1g
+    cpus: 0.5
+    # Log rotation
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  etl:
+    build: .
+    container_name: usajobs_etl_prod
+    environment:
+      USAJOBS_API_KEY: ${USAJOBS_API_KEY}
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      LOG_LEVEL: ${LOG_LEVEL}
+      # Production-specific settings
+      MAX_PAGES: ${MAX_PAGES:-20}
+      API_DELAY: ${API_DELAY:-2.0}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./logs:/app/logs
+      - ./data:/app/data  # For data exports/imports
+    restart: on-failure:3
+    # Security improvements for production
+    security_opt:
+      - no-new-privileges:true
+    # Resource limits
+    mem_limit: 512m
+    cpus: 0.25
+    # Log rotation
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    # Health check with longer intervals for production
+    healthcheck:
+      test: ["CMD-SHELL", "python -c 'import psycopg2; psycopg2.connect(host=\"${POSTGRES_HOST}\", database=\"${POSTGRES_DB}\", user=\"${POSTGRES_USER}\", password=\"${POSTGRES_PASSWORD}\")' || exit 1"]
+      interval: 60s
+      timeout: 30s
+      retries: 3
+      start_period: 120s
+
+  # Optional: Database backup service
+  backup:
+    image: postgres:15
+    container_name: usajobs_backup
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - ./backups:/backups
+      - ./scripts:/scripts:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    # Run backup script and exit
+    command: >
+      bash -c "
+        echo 'Starting database backup...'
+        pg_dump -h postgres -U ${POSTGRES_USER} -d ${POSTGRES_DB} > /backups/backup_$$(date +%Y%m%d_%H%M%S).sql
+        echo 'Backup completed'
+        # Keep only last 7 backups
+        ls -t /backups/backup_*.sql | tail -n +8 | xargs -r rm
+      "
+    restart: "no"
+    profiles:
+      - backup
+
+volumes:
+  postgres_data_prod:
+    driver: local
+
+networks:
+  default:
+    name: usajobs-network-prod
